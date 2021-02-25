@@ -1,0 +1,274 @@
+trigger:
+  branches:
+    include:
+    - swiftsight
+
+variables:
+  - name: 'PROJECT_NAME'
+    value: 'swiftsight'
+
+  - name: 'DEPLOYMENT_PLATFORM'
+    value: 'aws'
+
+  - name: 'DEPLOYMENT_ENDPOINT'
+    value: 'https://webhooks.amplify.ap-southeast-1.amazonaws.com/prod/webhooks?id=e36eef76-d620-418d-8c4b-13c15c02b539&token=x2fxqEZeOclmOM4qzArnRE8D4CCch0C2aHvZFMrv1k&operation=startbuild'
+
+  - name: 'SSG'
+    value: 'gatsby'
+
+  - name: 'SONARCLOUD_ENDPOINT'
+    value: 'Sonarcloud'
+
+  - name: 'SONARCLOUD_ORG'
+    value: 'ustdigital'
+
+pool:
+  vmImage: 'ubuntu-18.04'
+
+stages:
+- stage: Build
+  jobs:
+  - job: JekyllBuild
+    displayName: Jekyll Build
+    condition: eq(variables.SSG, 'jekyll')
+    steps:
+      - task: UseRubyVersion@0
+        inputs:
+          versionSpec: '>= 2.2 < 2.6'
+        displayName: 'Build - Install Ruby'
+        
+      - task: CmdLine@2
+        displayName: 'Build - Bundle install'
+        inputs:
+          script: |
+            gem install jekyll
+            gem install bundler
+           
+      - task: CmdLine@2
+        displayName: 'Build - Jekyll build'
+        inputs:
+          script: |
+            bundle install --retry=3 --jobs=4
+            bundle exec jekyll b -d public
+
+      - task: CopyFiles@2
+        displayName: 'Artifact - Copy _site to: $(Build.ArtifactStagingDirectory)'
+        inputs:
+          SourceFolder: public
+          TargetFolder: $(Build.ArtifactStagingDirectory)
+      - task: PublishBuildArtifacts@1
+        displayName: 'Artifact - Publish Artifact: drop'
+        inputs:
+          ArtifactName: drop         
+        
+  - job: GatsbyBuild
+    displayName: Gatsby Build
+    condition: eq(variables.SSG, 'gatsby')
+    steps:        
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '12.x'
+        displayName: 'Build - Install Node'  
+          
+      - script: |
+          npm install -g gatsby-cli
+          npm install
+        displayName: 'Build - Npm Install'
+        
+      - script: | 
+          gatsby build
+        displayName: 'Build - Gatsby Build' 
+
+      - task: CopyFiles@2
+        displayName: 'Artifact - Copy _site to: $(Build.ArtifactStagingDirectory)'
+        inputs:
+          SourceFolder: public
+          TargetFolder: $(Build.ArtifactStagingDirectory)
+      - task: PublishBuildArtifacts@1
+        displayName: 'Artifact - Publish Artifact: drop'
+        inputs:
+          ArtifactName: drop  
+
+  - job: NextJsBuild
+    displayName: NextJs Build
+    condition: eq(variables.SSG, 'nextjs')
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '12.x'
+        displayName: 'Build - Install Node'
+
+      - script: |
+          npm ci
+        displayName: 'Build - Npm Install'
+        
+      - script: | 
+          npm run build
+        displayName: 'Build - Nextjs Build' 
+
+      - task: CopyFiles@2
+        displayName: 'Artifact - Copy _site to: $(Build.ArtifactStagingDirectory)'
+        inputs:
+          SourceFolder: out
+          TargetFolder: $(Build.ArtifactStagingDirectory)
+      - task: PublishBuildArtifacts@1
+        displayName: 'Artifact - Publish Artifact: drop'
+        inputs:
+          ArtifactName: drop
+
+  - job: HugoBuild
+    displayName: Hugo Build
+    condition: eq(variables.SSG, 'hugo')
+    steps:
+      - script: |
+          wget https://github.com/gohugoio/hugo/releases/download/v0.80.0/hugo_extended_0.80.0_Linux-64bit.tar.gz
+          tar -xf hugo_extended_0.80.0_Linux-64bit.tar.gz
+          mv hugo /usr/bin/hugo
+          rm -rf hugo_extended_0.80.0_Linux-64bit.tar.gz
+        displayName: 'Build - Hugo Install'
+        
+      - script: |
+          hugo
+        displayName: 'Build - v Build' 
+
+      - task: CopyFiles@2
+        displayName: 'Artifact - Copy _site to: $(Build.ArtifactStagingDirectory)'
+        inputs:
+          SourceFolder: public
+          TargetFolder: $(Build.ArtifactStagingDirectory)
+      - task: PublishBuildArtifacts@1
+        displayName: 'Artifact - Publish Artifact: drop'
+        inputs:
+          ArtifactName: drop
+
+  - job: Testing
+    dependsOn: 
+      - GatsbyBuild
+      - JekyllBuild
+      - NextJsBuild
+      - HugoBuild
+    condition: |
+      or
+      (
+        in(dependencies.GatsbyBuild.result, 'Succeeded', 'Skipped'),
+        in(dependencies.JekyllBuild.result, 'Succeeded', 'Skipped'),
+        in(dependencies.NextJsBuild.result, 'Succeeded', 'Skipped'),
+        in(dependencies.HugoBuild.result, 'Succeeded', 'Skipped')
+      )
+    steps:
+      - task: DownloadBuildArtifacts@0
+        inputs:
+          buildType: 'current'
+          downloadType: 'single'
+          artifactName: 'drop'
+          downloadPath: '$(System.ArtifactsDirectory)'
+      - task: SonarCloudPrepare@1
+        inputs:
+          SonarCloud: ${{ variables.SONARCLOUD_ENDPOINT }}
+          organization: ${{ variables.SONARCLOUD_ORG }}
+          scannerMode: 'CLI'
+          configMode: 'manual'
+          cliProjectKey: ${{ variables.PROJECT_NAME }}
+          cliProjectName: ${{ variables.PROJECT_NAME }}
+          cliSources: '.'
+        displayName: 'SAST - SonarCloud Prepare'
+      - task: SonarCloudAnalyze@1
+        displayName: 'SAST - SonarCloud Analyze'
+      - task: SonarCloudPublish@1
+        inputs:
+          pollingTimeoutSec: '300'
+        displayName: SAST - SonarCloud Publish
+      #- task: sonarcloud-buildbreaker@2
+      #  inputs:
+      #    SonarCloud: ${{ variables.SONARCLOUD_ENDPOINT }}
+      #    organization: ${{ variables.SONARCLOUD_ORG }}
+      #  displayName: 'SAST - SonarCloud Breaker'     
+      - task: DockerInstaller@0
+        inputs:
+          dockerVersion: '17.09.0-ce'
+        displayName: 'DAST - Install Docker'
+      - task: CmdLine@2
+        displayName: 'DAST - Deploy to Docker Container'
+        inputs:
+          script: |
+            ls -lrt $(System.ArtifactsDirectory)
+            chmod -R 777 $(System.ArtifactsDirectory)/drop
+            docker run --rm --volume="$(System.ArtifactsDirectory)/drop:/usr/local/apache2/htdocs" -p 8080:80 -dit httpd:2.4
+            netstat -tlpen | grep 8080
+            curl -v http://172.17.0.1:8080 --retry 3
+      - task: Bash@3
+        inputs:
+          targetType: 'inline'
+          script: "chmod -R 777  ./\ndocker run --rm -v $(pwd):/zap/wrk/:rw -t owasp/zap2docker-stable zap-baseline.py -t   http://172.17.0.1:8080 -g gen.conf -x OWASP-ZAP-Report.xml -r scan-report.html\ntrue \n"
+        displayName: 'DAST - OWASP Scan'
+      - task: PowerShell@2
+        inputs:
+          targetType: 'inline'
+          script: |
+            $XslPath = "$($Env:SYSTEM_DEFAULTWORKINGDIRECTORY)/test/OWASPToNUnit3.xslt"
+            $XmlInputPath = "$($Env:SYSTEM_DEFAULTWORKINGDIRECTORY)/OWASP-ZAP-Report.xml"
+            $XmlOutputPath = "$($Env:SYSTEM_DEFAULTWORKINGDIRECTORY)/Converted-OWASP-ZAP-Report.xml"
+            $XslTransform = New-Object System.Xml.Xsl.XslCompiledTransform
+            $XslTransform.Load($XslPath)
+            $XslTransform.Transform($XmlInputPath, $XmlOutputPath)
+        displayName: 'DAST - Convert Report to NUnit type file'
+      - task: PublishTestResults@2
+        inputs:
+          testResultsFormat: 'NUnit'
+          testResultsFiles: 'Converted-OWASP-ZAP-Report.xml'
+        displayName: 'DAST - Publish Report'        
+
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.x'
+          addToPath: true
+          architecture: 'x64'
+        displayName: UI Test - Install Python  
+      - task: CmdLine@2
+        inputs:
+          script: |
+            python -m pip install --upgrade pip
+            pip install selenium pytest pytest-nunit
+            pip install webdriver-manager
+        displayName: UI Test - Install Chromedriver   
+      - task: CmdLine@2
+        inputs:
+          script: 'python -m pytest $(pwd)/test/ui_test.py -v --nunit-xml=test-results.xml'
+          #script: 'pytest "$(pwd)/test/chili-test.py" --cov my_project --cov-report html'
+          #script: 'pytest "$(pwd)/test/chili-test.py" --junitxml=junit/test-results.xml'
+        displayName: UI Test - Run UI Test
+        continueOnError: true
+      - task: CmdLine@2
+        inputs:
+          script: |
+            ls -lrt
+      - task: PublishTestResults@2
+        inputs:
+          testResultsFormat: 'NUnit'
+          testResultsFiles: '**/test-results.xml'
+        displayName: UI Test - Publish Result     
+  
+- stage: Release
+  dependsOn: Build
+  jobs:
+    #- job: Validation
+    #  displayName: Validation
+    #  pool: server    
+    #  timeoutInMinutes: 4320 # job times out in 3 days   
+    #  steps:   
+    #  - task: ManualValidation@0
+    #    timeoutInMinutes: 2880 # task times out in 1 day
+    #    inputs:
+    #        notifyUsers: isaac.teh@ust-global.com
+    #        instructions: 'Please validate the build configuration and resume'
+    #        onTimeout: 'resume'   
+    - job: DeploytoAWS
+      condition: eq(variables.DEPLOYMENT_PLATFORM, 'aws')
+      displayName: Deploy to AWS  
+      #dependsOn: Validation
+      steps:
+      - checkout: none
+      - task: CmdLine@2
+        inputs:
+          script: 'curl -X POST -d {} "${{ variables.DEPLOYMENT_ENDPOINT }}" -H "Content-Type:application/json"'
+        displayName: Deploy to AWS

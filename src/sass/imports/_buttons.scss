@@ -1,0 +1,66 @@
+.button{
+  -ms-flex-align: center;
+  align-items: center;
+  background-color: transparent;
+  border: 2px solid white;
+  //border-radius: $border-radius;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: -ms-inline-flexbox;
+  display: inline-flex;
+  font-size: 0.7em;
+  font-weight: bold;
+  -ms-flex-pack: center;
+  justify-content: center;
+  line-height: 1.5;
+  padding: 0.5em 1.875em;
+  text-decoration: none;
+  -webkit-transition: opacity 0.15s ease-in-out;
+  transition: opacity 0.15s ease-in-out;
+
+  .font-fira-sans & {
+    font-weight: 600;
+  }
+
+  &:hover,
+  &:focus,
+  &:active {
+    color: #fff;
+    opacity: 0.8;
+    outline: 0;
+  }
+
+  &.large {
+    padding: 0.625em 2.5em;
+  }
+
+  &.secondary {
+    background: #f7f7f1 !important;
+    color: black !important;
+    border: none !important;
+  }
+
+  &.secondary-contact {
+    background: #f7f7f1 !important;
+    color: black !important;
+    border: none !important;
+  }
+
+  &.contact{
+    margin-top: 20px;
+    border: 1px solid black;
+    font-size: 15px;
+    font-weight: 900px;
+    color: black;
+    padding: 0.6em 1.2em;
+  }
+  
+  &.transparent {
+    background: transparent !important;
+    color: black !important;
+    border: none !important;
+    font-size: 13px;
+    line-height: 16px;
+  }
+}

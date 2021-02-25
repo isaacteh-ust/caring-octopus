@@ -1,0 +1,9 @@
+@font-face {
+  font-family: "fort-book";
+  src: url("../../static/fonts/Fort-Book.otf");
+}
+
+@font-face {
+  font-family: "fort-bold";
+  src: url("../../static/fonts/Fort-Extrabold.otf");
+}

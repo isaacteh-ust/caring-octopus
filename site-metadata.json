@@ -1,0 +1,90 @@
+{
+    "base_font": "fort-sans",
+    "palette": "cyan",
+    "header": {
+        "logo_img": "images/swiftsightlogo.svg",
+        "company_logo_img": "images/ust_logo.png",
+        "logo_img_alt": "Logo",
+        "has_nav": true,
+        "nav_links": [
+            {
+                "label": "Approach",
+                "url": "/approach",
+                "style": "link"
+            },
+            {
+                "label": "Solutions",
+                "url": "/solutions",
+                "style": "link"
+            },
+            {
+                "label": "Insights",
+                "url": "/insights",
+                "style": "link"
+            },
+            {
+                "label": "Themes",
+                "url": "/themes",
+                "style": "link"
+            },
+            {
+                "label": "About Us",
+                "url": "/about",
+                "style": "link"
+            },
+            {
+                "label": "Contact Us",
+                "url": "/contact",
+                "style": "secondary-contact"
+            }
+        ]
+    },
+    "footer": {
+        "sections": [
+            {
+                "type": "footer_text",
+                "image": "images/swiftsightlogo_footer.svg",
+                "image_url": "/",
+                "image_alt": "Footer logo",
+                "content": "Get in contact with us by filling out the form",
+                "title": "Have a question ?",
+                "submit_label": "Get In Touch"
+            },
+            {
+                "type": "footer_nav",
+                "title": "",
+                "nav_links": [
+                    {
+                        "label": "Approach",
+                        "url": "/",
+                        "style": "link"
+                    },
+                    {
+                        "label": "Solutions",
+                        "url": "/solutions",
+                        "style": "link"
+                    },
+                    {
+                        "label": "Insights",
+                        "url": "/insights",
+                        "style": "link"
+                    },
+                    {
+                        "label": "Themes",
+                        "url": "/themes",
+                        "style": "link"
+                    },
+                    {
+                        "label": "About Us",
+                        "url": "/about",
+                        "style": "link"
+                    }
+                ]
+            }
+        ],
+        "has_nav": true,
+        "content": "We use cookies to provide you with the best experience of this website. To accept cookies continues  browsing as normal or read how to decline them in our cookie policy.  Please also see our privacy policy. "
+    },
+    "title": "UST SwiftSight",
+    "domain": "https://swiftsight-3f732.stackbit.dev"
+}
